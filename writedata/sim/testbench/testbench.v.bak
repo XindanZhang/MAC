@@ -1,0 +1,470 @@
+`timescale 1ns/1ps
+
+module testbench;
+
+wire clk128;
+wire clk125;
+wire miiTxClk;
+wire miiRxClk;
+wire reset;
+
+clockGenerator U_clockGenerator(
+  .clk128(clk128),
+  .clk125(clk125),
+  .miiTxClk(miiTxClk),
+  .miiRxClk(miiRxClk),
+  .reset(reset));
+
+wire Rx_clk;
+wire Tx_clk;
+wire hm_Rx_er;
+wire hm_Rx_dv;
+wire [7:0] hm_Rxd;
+wire Tx_er1;
+wire hm_Tx_en1;
+wire [7:0] hm_Txd1;
+wire Tx_er2;
+wire hm_Tx_en2;
+wire [7:0] hm_Txd2;
+wire Tx_er3;
+wire hm_Tx_en3;
+wire [7:0] hm_Txd3;
+wire Tx_er4;
+wire hm_Tx_en4;
+wire [7:0] hm_Txd4;
+
+reg mode;
+reg [200:1]   testcase_name;
+reg [200:1]   a;
+reg [200:1]   b;
+reg [200:1]   c;
+reg [200:1]   d;
+
+ephy U_ephy_hm(
+  .GTx_clk(clk125),
+  .Rx_clk(Rx_clk),
+  .Tx_clk(Tx_clk),
+  .Rx_er(hm_Rx_er),
+  .Rx_dv(hm_Rx_dv),
+  .Rxd(hm_Rxd),
+  .Crs(hm_Crs),
+  .Col(hm_Col),
+  .mode(mode));
+  
+wire [2:0] mac_speed;
+
+wire   dpram21_wren;
+wire   dpram21_rden;
+
+wire [7:0] dpram21_addr;
+wire [15:0] dpram21_data_out;
+
+wire [7:0] mac_ca ;  // = dpram21_addr[7:0];
+wire [15:0] mac_cd_in ;   //= dpram21_data_out[15:0];
+//assign dpram21_data_in = {16'd0, mac_cd_out};
+wire mac_csb ;  //= ~(dpram21_rden | dpram21_wren);
+wire mac_wrb ;  //= ~dpram21_wren; 
+reg rdy;
+reg mode_switch;
+
+task CHOOSE_MODE;
+begin
+    if(mode==0)//100M
+       U_host_sim.CPU_wr(7'd34,16'h2);
+   else//1000M
+      U_host_sim.CPU_wr(7'd34,16'h4);
+     
+end
+endtask
+
+wire [31:0] ff_rx_data_1;
+wire [1:0]   ff_rx_mod_1;
+wire [31:0] ff_rx_data_2;
+wire [1:0]   ff_rx_mod_2;
+wire [31:0] ff_rx_data_3;
+wire [1:0]   ff_rx_mod_3;
+wire [31:0] ff_rx_data_4;
+wire [1:0]   ff_rx_mod_4;
+
+wire rx_err1;
+wire rx_err2;
+wire rx_err3;
+wire rx_err4;
+// begin
+
+// $fdsbDumpfile("test.fsdb");
+// $fsdbDumpvars;
+
+// end
+wire [5:0] rx_err_mac;
+wire [15:0]   mac_cd_out;
+  
+MAC_top MAC_top_inst1
+(
+  
+  .Reset(reset),
+  .Clk_125M(clk125),
+  .Clk_user(clk128),
+  .Clk_reg(clk128),
+  .Speed(mac_speed), 
+  
+  // output 32bits
+  .ff_rx_rdy(rdy),           
+  .ff_rx_data(ff_rx_data_1),    
+  .ff_rx_mod(ff_rx_mod_1),      
+  .ff_rx_sop(ff_rx_sop_1),      
+  .ff_rx_eop(ff_rx_eop_1),      
+  .ff_rx_dsav(),                
+  .ff_rx_dval(ff_rx_dval_1),    
+  .rx_err(rx_err1),		        
+  
+ 
+  // input 32bits
+  .ff_tx_data(ff_rx_data_4),    
+  .ff_tx_mod(ff_rx_mod_4),      
+  .ff_tx_sop(ff_rx_sop_4),      
+  .ff_tx_eop(ff_rx_eop_4),      
+  .ff_tx_wren(ff_rx_dval_4),   
+  .ff_tx_err(rx_err4),                 
+  .tx_ff_uflow(),               
+  .ff_tx_rdy(),                 
+  .ff_tx_septy(),               
+  
+  // input clk
+  .Rx_clk(Rx_clk),
+  .Tx_clk(Tx_clk),
+  
+  // output 8bits
+  .Tx_er(Tx_er1),             // -------
+  .Tx_en(hm_Tx_en1),    
+  .Txd(hm_Txd1),        
+  // input 8bits 
+  .Rx_er(hm_Rx_er),  
+  .Rx_dv(hm_Rx_dv),  
+  .Rxd(hm_Rxd),      
+  
+  .Crs(1'b0),
+  .Col(1'b0),
+  // .CSB(mac_csb),
+  // .WRB(mac_wrb),
+  // .CD_in(mac_cd_in),
+  // .CD_out(mac_cd_out),
+  // .CA(mac_ca)
+  .CSB(mac_csb),
+  .WRB(mac_wrb),
+  .CD_in(mac_cd_in),
+  .CD_out(mac_cd_out),
+  .CA(mac_ca)  
+  
+  );
+  
+MAC_top MAC_top_inst2
+(
+  // clockGenerator input
+  .Reset(reset),
+  .Clk_125M(clk125),
+  .Clk_user(clk128),
+  .Clk_reg(clk128),
+  .Speed(mac_speed), //output Speeed
+  
+  // output 32bits
+  .ff_rx_rdy(rdy),               // input rdy
+  .ff_rx_data(ff_rx_data_2),     
+  .ff_rx_mod(ff_rx_mod_2),       
+  .ff_rx_sop(ff_rx_sop_2),       
+  .ff_rx_eop(ff_rx_eop_2),       
+  .ff_rx_dsav(),                
+  .ff_rx_dval(ff_rx_dval_2),     
+  .rx_err(rx_err2),		             // -------
+  
+  // input 32bits
+  .ff_tx_data(ff_rx_data_1),     
+  .ff_tx_mod(ff_rx_mod_1),       
+  .ff_tx_sop(ff_rx_sop_1),       
+  .ff_tx_eop(ff_rx_eop_1),       
+  .ff_tx_wren(ff_rx_dval_1),     
+  .ff_tx_err(rx_err1),           
+  .tx_ff_uflow(),              
+  .ff_tx_rdy(),               
+  .ff_tx_septy(),              
+  
+  // input clk
+  .Rx_clk(Rx_clk),
+  .Tx_clk(Tx_clk),
+  
+  // output 8bits
+  .Tx_er(Tx_er2),          
+  .Tx_en(hm_Tx_en2),  
+  .Txd(hm_Txd2),      
+  
+  // input 8bits 
+  .Rx_er(Tx_er2),          
+  .Rx_dv(hm_Tx_en2),  
+  .Rxd(hm_Txd2),      
+  
+  .Crs(1'b0),
+  .Col(1'b0),
+  // .CSB(mac_csb),
+  // .WRB(mac_wrb),
+  // .CD_in(mac_cd_in),
+  // .CD_out(mac_cd_out),
+  // .CA(mac_ca)
+  .CSB(mac_csb),
+  .WRB(mac_wrb),
+  .CD_in(mac_cd_in),
+  .CD_out(mac_cd_out),
+  .CA(mac_ca)  
+  
+  );
+  
+MAC_top MAC_top_inst3
+(
+  // clockGenerator input
+  .Reset(reset),
+  .Clk_125M(clk125),
+  .Clk_user(clk128),
+  .Clk_reg(clk128),
+  .Speed(mac_speed), //output Speeed
+  
+  // output 32bits
+  .ff_rx_rdy(rdy),               // input rdy
+  .ff_rx_data(ff_rx_data_3),    
+  .ff_rx_mod(ff_rx_mod_3),       
+  .ff_rx_sop(ff_rx_sop_3),       
+  .ff_rx_eop(ff_rx_eop_3),       
+  .ff_rx_dsav(),                 
+  .ff_rx_dval(ff_rx_dval_3),    
+  .rx_err(rx_err3),		         
+  
+  // input 32bits
+  .ff_tx_data(ff_rx_data_2),     
+  .ff_tx_mod(ff_rx_mod_2),       
+  .ff_tx_sop(ff_rx_sop_2),       
+  .ff_tx_eop(ff_rx_eop_2),       
+  .ff_tx_wren(ff_rx_dval_2),     
+  .ff_tx_err(rx_err2),           
+  .tx_ff_uflow(),               
+  .ff_tx_rdy(),                  
+  .ff_tx_septy(),                
+  
+  // input clk
+  .Rx_clk(Rx_clk),
+  .Tx_clk(Tx_clk),
+  
+  // output 8bits
+  .Tx_er(Tx_er3),           // -------
+  .Tx_en(hm_Tx_en3),  
+  .Txd(hm_Txd3),      
+  
+  // input 8bits 
+  .Rx_er(Tx_er3),         
+  .Rx_dv(hm_Tx_en3),  
+  .Rxd(hm_Txd3),     
+  
+  .Crs(1'b0),
+  .Col(1'b0),
+  // .CSB(mac_csb),
+  // .WRB(mac_wrb),
+  // .CD_in(mac_cd_in),
+  // .CD_out(mac_cd_out),
+  // .CA(mac_ca)
+  .CSB(mac_csb),
+  .WRB(mac_wrb),
+  .CD_in(mac_cd_in),
+  .CD_out(mac_cd_out),
+  .CA(mac_ca)  
+  
+  );
+  
+MAC_top MAC_top_inst4
+(
+  // clockGenerator input
+  .Reset(reset),
+  .Clk_125M(clk125),
+  .Clk_user(clk128),
+  .Clk_reg(clk128),
+  .Speed(mac_speed), //output Speeed
+  
+  // output 32bits
+  .ff_rx_rdy(rdy),               // input rdy
+  .ff_rx_data(ff_rx_data_4),    
+  .ff_rx_mod(ff_rx_mod_4),       
+  .ff_rx_sop(ff_rx_sop_4),       
+  .ff_rx_eop(ff_rx_eop_4),       
+  .ff_rx_dsav(),                 
+  .ff_rx_dval(ff_rx_dval_4),    
+  .rx_err(rx_err4),		         
+  
+  // input 32bits
+  .ff_tx_data(ff_rx_data_3),     
+  .ff_tx_mod(ff_rx_mod_3),       
+  .ff_tx_sop(ff_rx_sop_3),       
+  .ff_tx_eop(ff_rx_eop_3),       
+  .ff_tx_wren(ff_rx_dval_3),     
+  .ff_tx_err(rx_err3),           
+  .tx_ff_uflow(),               
+  .ff_tx_rdy(),                  
+  .ff_tx_septy(),                
+  
+  // input clk
+  .Rx_clk(Rx_clk),
+  .Tx_clk(Tx_clk),
+  
+  // output 8bits
+  .Tx_er(Tx_er4),           // -------
+  .Tx_en(hm_Tx_en4),  
+  .Txd(hm_Txd4),      
+  
+  // input 8bits 
+  .Rx_er(Tx_er4),         
+  .Rx_dv(hm_Tx_en4),  
+  .Rxd(hm_Txd4),     
+  
+  .Crs(1'b0),
+  .Col(1'b0),
+  // .CSB(mac_csb),
+  // .WRB(mac_wrb),
+  // .CD_in(mac_cd_in),
+  // .CD_out(mac_cd_out),
+  // .CA(mac_ca)
+  .CSB(mac_csb),
+  .WRB(mac_wrb),
+  .CD_in(mac_cd_in),
+  .CD_out(mac_cd_out),
+  .CA(mac_ca)  
+  
+  );
+
+
+
+data_cmp U_data_cmp(
+	.Rx_clk(Rx_clk)	, 
+	.Tx_clk(Tx_clk)	, 
+	
+	.Tx_er (Tx_er1)	, 
+	.Tx_en (hm_Tx_en1)	, 
+	.Txd   (hm_Txd1)	,
+	
+	.Rx_er (hm_Rx_er)	, 
+	.Rx_dv (hm_Rx_dv)	, 
+	.Rxd   (hm_Rxd)	,
+	
+    .reset (reset),
+    .testcase_name(a),	
+	.mode  (mode),
+    .num (2'b00)
+	);
+
+data_cmp U_data_cmp2(
+	.Rx_clk(Rx_clk)	, 
+	.Tx_clk(Tx_clk)	, 
+	
+	.Tx_er (Tx_er2)	, 
+	.Tx_en (hm_Tx_en2)	, 
+	.Txd   (hm_Txd2)	,
+	
+	.Rx_er (Tx_er2)	, 
+	.Rx_dv (hm_Tx_en2)	, 
+	.Rxd   (hm_Txd2)	,
+	
+    .reset (reset),
+    .testcase_name(b),	
+	.mode  (mode),
+    .num (2'b01)
+	);
+
+data_cmp U_data_cmp3(
+	.Rx_clk(Rx_clk)	, 
+	.Tx_clk(Tx_clk)	, 
+	
+	.Tx_er (Tx_er3)	, 
+	.Tx_en (hm_Tx_en3)	, 
+	.Txd   (hm_Txd3)	,
+	
+	.Rx_er (Tx_er3)	, 
+	.Rx_dv (hm_Tx_en3)	, 
+	.Rxd   (hm_Txd3)	,
+	
+    .reset (reset),
+    .testcase_name(c),	
+	.mode  (mode),
+    .num (2'b10)
+	);
+
+data_cmp U_data_cmp4(
+	.Rx_clk(Rx_clk)	, 
+	.Tx_clk(Tx_clk)	, 
+	
+	.Tx_er (Tx_er4)	, 
+	.Tx_en (hm_Tx_en4)	, 
+	.Txd   (hm_Txd4)	,
+	
+	.Rx_er (Tx_er4)	, 
+	.Rx_dv (hm_Tx_en4)	, 
+	.Rxd   (hm_Txd4)	,
+	
+    .reset (reset),
+    .testcase_name(d),	
+	.mode  (mode),
+    .num (2'b11)
+	);
+
+	
+	
+host_sim U_host_sim(
+.Reset	               			(reset	                  	),    
+.Clk_reg                  		(clk128                 	), 
+.CSB                            (mac_csb                        ),
+.WRB                            (mac_wrb                        ),
+.CD_in                          (mac_cd_in                      ),
+.CD_out                         (mac_cd_out                     ),
+.CPU_init_end                   (CPU_init_end               ),
+.CA                             (mac_ca                         )
+ 
+);	
+	
+  
+integer i = 0;
+integer len = 0;
+reg [15:0] data_cnt = 16'b1;
+initial
+begin
+	U_host_sim.CPU_init;
+	rdy=1'b0;
+	mode=1'b0;
+	mode_switch=0;
+	
+	// U_host_sim.CPU_wr(7'd33,16'h1);
+	
+	#80000;
+	rdy=1'b1;
+	`include "../testcase/0100000064.v"
+   // `include "../testcase/0100000065.v"
+	// `include "../testcase/0100000066.v"
+	// `include "../testcase/0100000067.v"
+	// `include "../testcase/0100000068.v"
+	
+	#80000;
+
+	$stop;
+end
+
+// dump fsdb file for debussy
+// initial
+// begin
+  // $fsdbDumpfile("mac.fsdb");
+  // $fsdbDumpvars;
+// end
+
+
+/* initial
+begin
+//    $dumpfile("mac.vcd");
+//    $dumpvars; 
+    $vcdpluson;
+    #12000000;
+    $finish;
+end */
+
+endmodule
+
